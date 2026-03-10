@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#define MAX  10
-#define GMAX 100000
+#define MAX 10
 
 typedef struct {
     int pid, at, bt, pri, rt, ct, tat, wt;
@@ -23,7 +22,7 @@ int main() {
         p[i].ct = p[i].tat = p[i].wt = 0;
     }
 
-    /* insertion-sort by arrival time */
+    /* sort by arrival time */
     for (int i = 1; i < n; i++) {
         Proc key = p[i]; int j = i - 1;
         while (j >= 0 && p[j].at > key.at) { p[j+1] = p[j]; j--; }
@@ -31,10 +30,7 @@ int main() {
     }
 
     /* preemptive priority scheduling */
-    static int gpid[GMAX], gt[GMAX+1];
-    int glen = 0, done = 0, t = 0;
-
-    t = p[0].at;
+    int done = 0, t = p[0].at;
     for (int i = 1; i < n; i++) if (p[i].at < t) t = p[i].at;
 
     while (done < n) {
@@ -48,11 +44,10 @@ int main() {
         }
 
         if (sel < 0) {
-            gpid[glen] = -1; gt[glen] = t; glen++;
             int nxt = -1;
             for (int i = 0; i < n; i++)
                 if (p[i].rt > 0 && (nxt < 0 || p[i].at < nxt)) nxt = p[i].at;
-            t = nxt; gt[glen] = t;
+            t = nxt;
             continue;
         }
 
@@ -62,9 +57,8 @@ int main() {
             if (p[i].at > t && p[i].at < nxt) nxt = p[i].at;
         }
 
-        gpid[glen] = p[sel].pid; gt[glen] = t; glen++;
         p[sel].rt -= (nxt - t);
-        t = nxt; gt[glen] = t;
+        t = nxt;
 
         if (p[sel].rt == 0) {
             p[sel].ct  = t;
@@ -74,45 +68,21 @@ int main() {
         }
     }
 
-    /* Gantt chart (merged) */
-    int mpid[GMAX], mt[GMAX+1]; int mlen = 0;
-    mpid[0] = gpid[0]; mt[0] = gt[0];
-    for (int i = 1; i < glen; i++) {
-        if (gpid[i] != mpid[mlen]) {
-            mlen++; mpid[mlen] = gpid[i]; mt[mlen] = gt[i];
-        }
-    }
-    mt[mlen+1] = gt[glen];
-    mlen++;
-
-    printf("Gantt Chart:\n");
-    printf(" "); for (int i=0;i<mlen;i++) printf("--------"); printf("\n|");
-    for (int i=0;i<mlen;i++) {
-        if (mpid[i]<0) printf("  IDLE  |");
-        else           printf("   P%-2d  |", mpid[i]);
-    }
-    printf("\n "); for (int i=0;i<mlen;i++) printf("--------");
-    printf("\n%-3d", mt[0]);
-    for (int i=0;i<mlen;i++) printf("       %-3d", mt[i+1]);
-    printf("\n");
-
-    /* results table */
-    printf("\nProcess\tAT\tBT\tPriority\tCT\tTAT\tWT\n");
+    /* output in original pid order */
     float twt = 0, ttat = 0;
-    for (int pid = 1; pid <= n; pid++) {
-        for (int i = 0; i < n; i++) {
-            if (p[i].pid == pid) {
-                printf("P%d\t%d\t%d\t%d\t\t%d\t%d\t%d\n",
-                       p[i].pid, p[i].at, p[i].bt, p[i].pri,
-                       p[i].ct, p[i].tat, p[i].wt);
-                twt  += p[i].wt;
-                ttat += p[i].tat;
-                break;
-            }
-        }
-    }
-    printf("\nAverage Waiting Time    : %.2f\n", twt  / n);
-    printf("Average Turnaround Time : %.2f\n",  ttat / n);
+
+    printf("Waiting Time:\n");
+    for (int pid = 1; pid <= n; pid++)
+        for (int i = 0; i < n; i++)
+            if (p[i].pid == pid) { printf("P%d %d\n", p[i].pid, p[i].wt); twt += p[i].wt; break; }
+
+    printf("Turnaround Time:\n");
+    for (int pid = 1; pid <= n; pid++)
+        for (int i = 0; i < n; i++)
+            if (p[i].pid == pid) { printf("P%d %d\n", p[i].pid, p[i].tat); ttat += p[i].tat; break; }
+
+    printf("Average Waiting Time: %.2f\n",    twt  / n);
+    printf("Average Turnaround Time: %.2f\n", ttat / n);
 
     return 0;
 }
